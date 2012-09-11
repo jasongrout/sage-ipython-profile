@@ -47,6 +47,17 @@ class SageMagics(Magics):
             self.shell.run_line_magic('run', f)
         raise TryNext
 
+    # @line_magic
+    # def preparse(self, parameter_s = ''):
+    #     """Toggle autoindent on/off (if available)."""
+    #     if parameter_s in ('on', 'true'):
+    #         self.shell.set_preparse(True)
+    #     elif parameter_s in ('off', 'false'):
+    #         self.shell.set_preparse(False)
+    #     else:
+    #         self.shell.set_preparse()
+    #     print("Sage preparsing is:",['OFF','ON'][self.shell.preparse])
+
 from IPython.core.formatters import PlainTextFormatter
 class SagePlainTextFormatter(PlainTextFormatter):
     """
