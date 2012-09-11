@@ -94,15 +94,13 @@ class SagePlainTextFormatter(PlainTextFormatter):
             sage: shell.displayhook.compute_format_data([a,a])
             {u'text/plain': '[\n[1 0]  [1 0]\n[0 1], [0 1]\n]'}
         """
-        from cStringIO import StringIO
-        s = StringIO()
         import sage
         from sage.misc.displayhook import print_obj
-        print_obj(s, obj)
-        if s:
-            return s.getvalue().strip()
-        else:
+        s = print_obj(obj)
+        if s is False:
             return super(SagePlainTextFormatter, self).__call__(obj)
+        else:
+            return s
 
 
 
