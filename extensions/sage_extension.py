@@ -43,9 +43,8 @@ class SageMagics(Magics):
         self.attach.append(filename)
 
     def pre_run_code_hook(self, ip):
-        print 'TODO: load attached files: %s'%(self.attach,)
-        import traceback
-        #print traceback.print_stack()
+        for f in self.attach:
+            self.shell.run_line_magic('run', f)
         raise TryNext
 
 from IPython.core.formatters import PlainTextFormatter
