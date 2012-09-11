@@ -111,6 +111,7 @@ class SagePlainTextFormatter(PlainTextFormatter):
 from IPython.core.inputsplitter import (transform_ipy_prompt, transform_classic_prompt,
                                         transform_help_end, transform_escaped,
                                         transform_assign_system, transform_assign_magic,
+                                        cast_unicode,
                                         IPythonInputSplitter)
 
 def first_arg(f):
@@ -318,7 +319,7 @@ from sagenb.misc.support import automatic_names
         IPython.core.oinspect.getargspec = sageinspect.sage_getargspec
 
     def init_line_transforms(self):
-        self.shell.inputsplitter = SageInputSplitter()
+        self.shell.input_splitter = SageInputSplitter()
         import sage
         import sage.all
         from sage.misc.interpreter import (SagePromptDedenter, SagePromptTransformer,
