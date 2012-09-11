@@ -72,9 +72,7 @@ c.InteractiveShellApp.extensions = [ 'sage_extension' ]
 c.TerminalIPythonApp.display_banner = False
 
 # lines of code to run at IPython startup.
-c.TerminalIPythonApp.exec_lines = """
-
-""".splitlines()
+c.TerminalIPythonApp.exec_lines = []
 
 # Enable GUI event loop integration ('qt', 'wx', 'gtk', 'glut', 'pyglet',
 # 'osx').
@@ -281,7 +279,7 @@ c.TerminalInteractiveShell.confirm_exit = False
 
 # 'all', 'last', 'last_expr' or 'none', specifying which nodes should be run
 # interactively (displaying output from expressions).
-# c.TerminalInteractiveShell.ast_node_interactivity = 'last_expr'
+c.TerminalInteractiveShell.ast_node_interactivity = 'all'
 
 # Automatically call the pdb debugger after every exception.
 # c.TerminalInteractiveShell.pdb = False
