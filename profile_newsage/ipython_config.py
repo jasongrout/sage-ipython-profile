@@ -24,13 +24,7 @@ c = get_config()
 # c.InteractiveShellApp.code_to_run = ''
 
 # lines of code to run at IPython startup.
-c.InteractiveShellApp.exec_lines = """
-from sage.all import *
-from sage.calculus.predefined import x
-from sage.misc.html import html
-from sage.server.support import help
-from sagenb.misc.support import automatic_names
-""".splitlines()
+# c.InteractiveShellApp.exec_lines = []
 
 # Enable GUI event loop integration ('qt', 'wx', 'gtk', 'glut', 'pyglet',
 # 'osx').
@@ -75,10 +69,12 @@ c.InteractiveShellApp.extensions = [ 'sage_extension' ]
 # c.TerminalIPythonApp.log_level = 30
 
 # Whether to display a banner upon starting IPython.
-# c.TerminalIPythonApp.display_banner = True
+c.TerminalIPythonApp.display_banner = False
 
 # lines of code to run at IPython startup.
-# c.TerminalIPythonApp.exec_lines = []
+c.TerminalIPythonApp.exec_lines = """
+
+""".splitlines()
 
 # Enable GUI event loop integration ('qt', 'wx', 'gtk', 'glut', 'pyglet',
 # 'osx').
@@ -93,7 +89,7 @@ c.InteractiveShellApp.extensions = [ 'sage_extension' ]
 
 # Create a massive crash report when IPython encounters what may be an internal
 # error.  The default is to append a short message to the usual traceback
-# c.TerminalIPythonApp.verbose_crash = False
+c.TerminalIPythonApp.verbose_crash = True # Needed to use Sage crash handler
 
 # If a command or file is given via the command-line, e.g. 'ipython foo.py
 # c.TerminalIPythonApp.force_interact = False
