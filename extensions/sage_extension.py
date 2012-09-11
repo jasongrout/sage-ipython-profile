@@ -103,6 +103,125 @@ class SagePlainTextFormatter(PlainTextFormatter):
             return s
 
 
+# SageInputSplitter:
+#  Hopefully most or all of this code can go away when
+#  https://github.com/ipython/ipython/issues/2293 is resolved
+#  apparently we will have stateful transformations then.
+#  see also https://github.com/ipython/ipython/pull/2402
+from IPython.core.inputsplitter import (transform_ipy_prompt, transform_classic_prompt,
+                                        transform_help_end, transform_escaped,
+                                        transform_assign_system, transform_assign_magic,
+                                        IPythonInputSplitter)
+
+def first_arg(f):
+    def tm(arg1, arg2):
+        return f(arg1)
+    return tm
+
+class SageInputSplitter(IPythonInputSplitter):
+    """
+    We override the input splitter for two reasons:
+
+    1. to make the list of transforms a class attribute that can be modified
+
+    2. to pass the line number to transforms (we strip the line number off for IPython transforms)
+    """
+
+        # List of input transforms to apply
+    transforms = map(first_arg, [transform_ipy_prompt, transform_classic_prompt,
+                                 transform_help_end, transform_escaped,
+                                 transform_assign_system, transform_assign_magic])
+
+    # a direct copy of the IPython splitter, except that the
+    # transforms are called with the line numbers, and the transforms come from the class attribute
+    def push(self, lines):
+        """Push one or more lines of IPython input.
+
+        This stores the given lines and returns a status code indicating
+        whether the code forms a complete Python block or not, after processing
+        all input lines for special IPython syntax.
+
+        Any exceptions generated in compilation are swallowed, but if an
+        exception was produced, the method returns True.
+
+        Parameters
+        ----------
+        lines : string
+          One or more lines of Python input.
+
+        Returns
+        -------
+        is_complete : boolean
+          True if the current input source (the result of the current input
+        plus prior inputs) forms a complete Python execution block.  Note that
+        this value is also stored as a private attribute (_is_complete), so it
+        can be queried at any time.
+        """
+        if not lines:
+            return super(IPythonInputSplitter, self).push(lines)
+
+        # We must ensure all input is pure unicode
+        lines = cast_unicode(lines, self.encoding)
+
+        # If the entire input block is a cell magic, return after handling it
+        # as the rest of the transformation logic should be skipped.
+        if lines.startswith('%%') and not \
+          (len(lines.splitlines()) == 1 and lines.strip().endswith('?')):
+            return self._handle_cell_magic(lines)
+
+        # In line mode, a cell magic can arrive in separate pieces
+        if self.input_mode == 'line' and self.processing_cell_magic:
+            return self._line_mode_cell_append(lines)
+
+        # The rest of the processing is for 'normal' content, i.e. IPython
+        # source that we process through our transformations pipeline.
+        lines_list = lines.splitlines()
+
+        # Transform logic
+        #
+        # We only apply the line transformers to the input if we have either no
+        # input yet, or complete input, or if the last line of the buffer ends
+        # with ':' (opening an indented block).  This prevents the accidental
+        # transformation of escapes inside multiline expressions like
+        # triple-quoted strings or parenthesized expressions.
+        #
+        # The last heuristic, while ugly, ensures that the first line of an
+        # indented block is correctly transformed.
+        #
+        # FIXME: try to find a cleaner approach for this last bit.
+
+        # If we were in 'block' mode, since we're going to pump the parent
+        # class by hand line by line, we need to temporarily switch out to
+        # 'line' mode, do a single manual reset and then feed the lines one
+        # by one.  Note that this only matters if the input has more than one
+        # line.
+        changed_input_mode = False
+
+        if self.input_mode == 'cell':
+            self.reset()
+            changed_input_mode = True
+            saved_input_mode = 'cell'
+            self.input_mode = 'line'
+
+        # Store raw source before applying any transformations to it.  Note
+        # that this must be done *after* the reset() call that would otherwise
+        # flush the buffer.
+        self._store(lines, self._buffer_raw, 'source_raw')
+
+        try:
+            push = super(IPythonInputSplitter, self).push
+            buf = self._buffer
+            for line in lines_list:
+                line_number = len(buf)
+                if self._is_complete or not buf or \
+                       (buf and buf[-1].rstrip().endswith((':', ','))):
+                    for f in self.transforms:
+                        line = f(line, line_number)
+                out = push(line)
+        finally:
+            if changed_input_mode:
+                self.input_mode = saved_input_mode
+        return out
 
 class SagePlugin(Plugin):
     startup_code = """from sage.all import *
@@ -199,6 +318,7 @@ from sagenb.misc.support import automatic_names
         IPython.core.oinspect.getargspec = sageinspect.sage_getargspec
 
     def init_line_transforms(self):
+        self.shell.inputsplitter = SageInputSplitter()
         import sage
         import sage.all
         from sage.misc.interpreter import (SagePromptDedenter, SagePromptTransformer,
@@ -206,9 +326,7 @@ from sagenb.misc.support import automatic_names
         self.shell.input_splitter.transforms = [SagePromptDedenter(),
                                                 SagePromptTransformer(), 
                                                 LoadAttachTransformer(), 
-                                                SagePreparseTransformer()
-                                                ] + self.shell.input_splitter.transforms
-        #preparser(True)
+                                                SagePreparseTransformer()] + self.shell.input_splitter.transforms
 
 
     def deprecated(self):
