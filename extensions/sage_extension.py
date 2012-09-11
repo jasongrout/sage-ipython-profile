@@ -193,11 +193,10 @@ from sagenb.misc.support import automatic_names
     def init_line_transforms(self):
         import sage
         import sage.all
-        from sage.misc.interpreter import (SagePromptDedenter, SagePromptTransformer,  InterfaceMagicTransformer,
+        from sage.misc.interpreter import (SagePromptDedenter, SagePromptTransformer,
                                            LoadAttachTransformer, SagePreparseTransformer)
         self.shell.input_splitter.transforms.extend([SagePromptDedenter(),
                                                      SagePromptTransformer(), 
-                                                     #InterfaceMagicTransformer(),
                                                      LoadAttachTransformer(), 
                                                      SagePreparseTransformer() ])
         #preparser(True)
