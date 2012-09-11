@@ -328,6 +328,8 @@ from sagenb.misc.support import automatic_names
                                                 LoadAttachTransformer(), 
                                                 SagePreparseTransformer()] + self.shell.input_splitter.transforms
 
+        from sage.misc.interpreter import preparser
+        preparser(True)
 
     def deprecated(self):
         """
