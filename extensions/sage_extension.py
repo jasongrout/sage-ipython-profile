@@ -195,10 +195,11 @@ from sagenb.misc.support import automatic_names
         import sage.all
         from sage.misc.interpreter import (SagePromptDedenter, SagePromptTransformer,
                                            LoadAttachTransformer, SagePreparseTransformer)
-        self.shell.input_splitter.transforms.extend([SagePromptDedenter(),
-                                                     SagePromptTransformer(), 
-                                                     LoadAttachTransformer(), 
-                                                     SagePreparseTransformer() ])
+        self.shell.input_splitter.transforms = [SagePromptDedenter(),
+                                                SagePromptTransformer(), 
+                                                LoadAttachTransformer(), 
+                                                SagePreparseTransformer()
+                                                ] + self.shell.input_splitter.transforms
         #preparser(True)
 
 
