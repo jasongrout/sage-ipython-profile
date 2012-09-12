@@ -13,11 +13,12 @@ A Sage extension which adds sage-specific features:
 * exit hook (call quit_sage())
 * Display hook
 
-
 TODO:
-* Crash handler -- change the crash text.  This may need a new app, based on TerminalApp, rather than something we change here!
 
-* interactivity -- all???  I thought we had `last_expr`
+* Load/attach don't work with urls, .sage files, pyx files, etc.  Should they?
+
+* Get the doctests working...
+
 """
 
 from IPython.core.hooks import TryNext
@@ -28,13 +29,16 @@ import sys
 import sage
 import sage.all
 from sage.all import quit_sage
+from sage.misc.interpreter import preparser
+from sage.misc.preparser import preparse
 
 @magics_class
 class SageMagics(Magics):
     def __init__(self, *a, **kw):
         super(SageMagics, self).__init__(*a, **kw)
         self.attach = []
-        
+        self.ipython_prun = self.shell.magics_manager.magics['line']['prun']
+
     @line_magic
     def attach(self, filename=''):
         r"""%attach => run the code each time before starting up.
@@ -46,6 +50,60 @@ class SageMagics(Magics):
         for f in self.attach:
             self.shell.run_line_magic('run', f)
         raise TryNext
+
+    @line_magic
+    def iload(self, s):
+        """
+        A magic command to interactively load a file as in MAGMA.
+
+        :param s: the file to be interactively loaded
+        :type s: string
+
+        .. note::
+
+            Currently, this cannot be completely doctested as it
+            relies on :func:`raw_input`.
+
+        EXAMPLES::
+
+            sage: ip = get_ipython()           # not tested: works only in interactive shell
+            sage: ip.magic_iload('/dev/null')  # not tested: works only in interactive shell
+            Interactively loading "/dev/null"  # not tested: works only in interactive shell
+        """
+        try:
+            name = str(eval(s))
+        except Exception:
+            name = s.strip()
+
+        try:
+            F = open(name)
+        except IOError:
+            raise ImportError, 'could not open file "%s"'%name
+
+
+        shell = self.shell
+
+        #We need to update the execution count so that the history for the
+        #iload command and the history for the first line of the loaded
+        #file are not written to the history database with the same line
+        #number (execution count).  This happens since the execution count
+        #is updated only after the magic command is run.
+        shell.execution_count += 1
+
+        print 'Interactively loading "%s"'%name
+
+        # The following code is base on IPython's
+        # InteractiveShell.interact,
+        more = False
+        for line in F.readlines():
+            prompt = shell.prompt_manager.render('in' if not more else 'in2', color=True)
+            raw_input(prompt.encode('utf-8') + line.rstrip())
+
+            shell.input_splitter.push(line)
+            more = shell.input_splitter.push_accepts_more()
+            if not more:
+                source, source_raw = shell.input_splitter.source_raw_reset()
+                shell.run_cell(source_raw, store_history=True)
 
     # @line_magic
     # def preparse(self, parameter_s = ''):
@@ -224,6 +282,11 @@ class SageInputSplitter(IPythonInputSplitter):
                 self.input_mode = saved_input_mode
         return out
 
+# END SageIPythonInputSplitter
+#
+#
+
+
 class SagePlugin(Plugin):
     startup_code = """from sage.all import *
 from sage.calculus.predefined import x
@@ -263,7 +326,7 @@ from sagenb.misc.support import automatic_names
     def register_interface_magics(self):
         """Register magics for each of the Sage interfaces"""
         interfaces = sorted([ obj.name()
-                              for obj in sage.interfaces.all.__dict__.values() 
+                              for obj in sage.interfaces.all.__dict__.values()
                               if isinstance(obj, sage.interfaces.interface.Interface) ])
         for name in interfaces:
             def tmp(line,name=name):
@@ -301,7 +364,7 @@ from sagenb.misc.support import automatic_names
         self.shell.run_cell('from sage.all_cmdline import *')
         self.run_init()
 
-        
+
     def run_init(self):
         startup_file = os.environ.get('SAGE_STARTUP_FILE', '')
         if os.path.exists(startup_file):
@@ -325,11 +388,10 @@ from sagenb.misc.support import automatic_names
         from sage.misc.interpreter import (SagePromptDedenter, SagePromptTransformer,
                                            LoadAttachTransformer, SagePreparseTransformer)
         self.shell.input_splitter.transforms = [SagePromptDedenter(),
-                                                SagePromptTransformer(), 
-                                                LoadAttachTransformer(), 
+                                                SagePromptTransformer(),
+                                                LoadAttachTransformer(),
                                                 SagePreparseTransformer()] + self.shell.input_splitter.transforms
 
-        from sage.misc.interpreter import preparser
         preparser(True)
 
     def deprecated(self):
@@ -363,7 +425,7 @@ def load_ipython_extension(ip):
     """Load the extension in IPython."""
     plugin = SagePlugin(shell=ip, config=ip.config)
     ip.plugin_manager.register_plugin('sage', plugin)
-    
+
 
 r'''
         This method loads all modified attached files before executing
@@ -394,14 +456,14 @@ r'''
         EXAMPLES:
 
         We install a fake :func:`sage.all.quit_sage`::
-        
+
             sage: import sage.all
             sage: old_quit = sage.all.quit_sage
             sage: def new_quit(): print "Quitter!!!"
             sage: sage.all.quit_sage = new_quit
 
         Now, we can check to see that this method works::
-        
+
             sage: from sage.misc.interpreter import get_test_shell
             sage: shell = get_test_shell()
             sage: shell.ask_exit()
@@ -415,3 +477,4 @@ r'''
             sage: sage.all.quit_sage = old_quit
         """
 '''
+
